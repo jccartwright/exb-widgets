@@ -96,14 +96,18 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   })
 
   const handleExpandSidebar = (sectionId: string, viewId: string): void => {
-    if (sidebarWidgetState && sidebarWidgetState.collapse === false) {
+    if (!sidebarWidgetState) {
+      console.warn(`Sidebar ${sidebarWidgetId} not available`)
+      return
+    }
+    if (sidebarWidgetState.collapse === false) {
       getAppStore().dispatch(appActions.widgetStatePropChange(
         sidebarWidgetId,
         'collapse',
         true
       ))
-      jimuHistory.changeView(sectionId, viewId)
     }
+    jimuHistory.changeView(sectionId, viewId)
   }
 
   useEffect(() => {
@@ -192,6 +196,9 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     }
 
     // HACK - force popup visibility
+    if (!mapViewRef.current.popup.isResolved()) {
+      console.warn('Popup is not resolved')
+    }
     if (featureHits.length && !mapViewRef.current.popup.visible) {
       mapViewRef.current.popup.visible = true
       console.warn('forcing popup to display')
