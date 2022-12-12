@@ -226,7 +226,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     const featureLayerDataSource = ds as FeatureLayerDataSource
     setDataSource(featureLayerDataSource)
     countAllSamples(featureLayerDataSource).then((response) => {
-      console.log(`counted ${response.count} total records in ${featureLayerDataSource.url}`)
+      // console.log(`counted ${response.count} total records in ${featureLayerDataSource.url}`)
       setTotalRecordCount(response.count)
     })
   }
