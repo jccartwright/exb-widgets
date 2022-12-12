@@ -35,7 +35,7 @@ export default class FilterAction extends AbstractMessageAction {
   onExecute (message: Message, actionConfig?: any): Promise<boolean> | boolean {
     switch (message.type) {
       case MessageType.DataSourceFilterChange:
-        console.log('datasource-record-count#filter-change-action: got DataSourceFilterChangeMessage', message, actionConfig)
+        // console.log('datasource-record-count#filter-change-action: got DataSourceFilterChangeMessage', message, actionConfig)
         const ds: QueriableDataSource = DataSourceManager.getInstance().getDataSource((<DataSourceFilterChangeMessage>message).dataSourceId) as QueriableDataSource
         const queryParams: SqlQueryParams = ds.getCurrentQueryParams()
 
@@ -56,7 +56,7 @@ export default class FilterAction extends AbstractMessageAction {
 
         this.extentString = extentString
         //trigger an update for the widget
-        console.log('updating property...')
+        // console.log('updating property...')
         getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'updateCount', this.extentString))
         break
     }

@@ -1,12 +1,12 @@
 /** @jsx jsx */
-import { AllWidgetProps, jsx, IMState, SqlQueryParams, QueriableDataSource } from "jimu-core";
-import { useState, useEffect } from 'react';
-import { JimuMapView, JimuMapViewComponent } from "jimu-arcgis";
-import { defaultMessages as jimuUIMessages } from 'jimu-ui';
-import Extent from "esri/geometry/Extent"
-import FeatureLayer from "esri/layers/FeatureLayer"
-import webMercatorUtils from "esri/geometry/support/webMercatorUtils"
-import { IMConfig } from '../config';
+import { AllWidgetProps, jsx, IMState, SqlQueryParams, QueriableDataSource } from 'jimu-core'
+import { useState, useEffect } from 'react'
+import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
+import { defaultMessages as jimuUIMessages } from 'jimu-ui'
+import Extent from 'esri/geometry/Extent'
+import FeatureLayer from 'esri/layers/FeatureLayer'
+import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
+import { IMConfig } from '../config'
 
 interface ExtraProps {
   sqlString: any
@@ -29,10 +29,9 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
 
   // fires only once, when widget initially opened
   useEffect(() => {
-
     // one-time cleanup function
-    return function cleanup() {
-      // remove at time componment is destroyed 
+    return function cleanup () {
+      // remove at time componment is destroyed
       if (extentWatch) {
         extentWatch.remove()
         extentWatch = null
@@ -58,7 +57,7 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
       return
     }
 
-    if (! isStationary) {
+    if (!isStationary) {
       // view being updated
       return
     }
@@ -74,16 +73,16 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
     }
 
     if (!pointLayer) {
-      console.error("point layer not found")
+      console.error('point layer not found')
       return
     }
 
     if (!densityLayer) {
-      console.error("density layer not found")
+      console.error('density layer not found')
       return
     }
 
-    console.log('layer-listener: definitionExpression = ', definitionExpression)
+    // console.log('layer-listener: definitionExpression = ', definitionExpression)
     if (definitionExpression && (definitionExpression !== '(1=1)' && definitionExpression !== '1=1')) {
       pointLayer.visible = true
       // pointLayer.refresh()
@@ -99,11 +98,19 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
 
   // only called when widget first loaded
   const activeViewChangeHandler = (jmv: JimuMapView) => {
-    if (! jmv) {
+    if (!jmv) {
       console.warn('no MapView')
       return
     }
 
+    jmv.view.on('click', (evt) => {
+      jmv.view.hitTest(evt).then((response) => {
+        const coralHits = response.results?.filter(hitResult => hitResult.layer.title === props.config.pointLayerTitle)
+        if (coralHits.length) {
+          console.log('open Feature Info panel')
+        }
+      })
+    })
     setView(jmv.view)
     setPointLayer(jmv.view.map.layers.find(lyr => lyr.title === props.config.pointLayerTitle))
     setDensityLayer(jmv.view.map.layers.find(lyr => lyr.title === props.config.densityLayerTitle))
@@ -122,13 +129,13 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
           return
         }
         setExtent(webMercatorUtils.webMercatorToGeographic(extent))
-      });
+      })
     };
 
     if (!stationaryWatch) {
       stationaryWatch = jmv.view.watch('stationary', stationary => {
         setIsStationary(stationary)
-      });
+      })
     }
 
     if (!updatingWatch) {
@@ -144,18 +151,17 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
       sqlWatch = layer.watch('definitionExpression', (newExpression, oldExpression) => {
         // console.log('definitionExpression changed from '+oldExpression+' to '+newExpression)
         setDefinitionExpression(newExpression)
-      });
+      })
     }
-  };
-
+  }
 
   return (
     <div className="widget-use-map-view" style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-      <JimuMapViewComponent 
-        useMapWidgetId={props.useMapWidgetIds?.[0]} 
+      <JimuMapViewComponent
+        useMapWidgetId={props.useMapWidgetIds?.[0]}
         onActiveViewChange={activeViewChangeHandler}></JimuMapViewComponent>
-      
-      <div style={{overflowY: 'auto', height: '100%', paddingLeft: '5px'}}>
+
+      <div style={{ overflowY: 'auto', height: '100%', paddingLeft: '5px' }}>
         {(view && props.config.showValues) ?
           <div>
           <span>Where: {definitionExpression? definitionExpression: 'None'}</span><br/>
@@ -163,12 +169,12 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
           <span>Extent: {extent.xmin.toFixed(3)}, {extent.ymin.toFixed(3)}, {extent.xmax.toFixed(3)}, {extent.ymax.toFixed(3)}</span>
           </div> : ''
         }
-        {(!view)?
+        {(!view) ?
            <div>
             <span>MapView must be defined</span>
           </div>: ''
         }
       </div>
     </div>
-  );
+  )
 }

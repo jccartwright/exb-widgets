@@ -18,26 +18,26 @@ export default function Setting (props: AllWidgetSettingProps<{}>) {
   const [sidebarWidgetsArray, setSidebarWidgetsArray] = useState([] as any[])
 
   // Get the widget state - because the sidebar state may change in the runtime, via Redux's useSelector hook
-  const widgetState = useSelector((state: IMState) => {
-    const widgetState = state.widgetsState[sidebarWidgetId]
-    return widgetState
-  })
+  // const widgetState = useSelector((state: IMState) => {
+  //   const widgetState = state.widgetsState[sidebarWidgetId]
+  //   return widgetState
+  // })
 
   // Update the appWidgets property once, on page load
-  useEffect(() => {
-    const widgets = getAppStore().getState().appConfig.widgets
-    setAppWidgets(widgets)
-  }, [])
+  // useEffect(() => {
+  //   const widgets = getAppStore().getState().appConfig.widgets
+  //   setAppWidgets(widgets)
+  // }, [])
 
   // Update the widgetsArray and sidebarWidgetsArray properties every time appWidgets changes
-  useEffect(() => {
-    if (appWidgets) {
-      const widgetsArray = Object.values(appWidgets)
-      // TODO id values are different than when retrieved w/in the main widget body.
-      console.log('sidebarWidgets: ', widgetsArray.filter(w => w.uri === 'widgets/layout/sidebar/'))
-      setSidebarWidgetsArray(widgetsArray.filter(w => w.uri === 'widgets/layout/sidebar/'))
-    }
-  }, [appWidgets])
+  // useEffect(() => {
+  //   if (appWidgets) {
+  //     const widgetsArray = Object.values(appWidgets)
+  //     // TODO id values are different than when retrieved w/in the main widget body.
+  //     console.log('sidebarWidgets: ', widgetsArray.filter(w => w.uri === 'widgets/layout/sidebar/'))
+  //     setSidebarWidgetsArray(widgetsArray.filter(w => w.uri === 'widgets/layout/sidebar/'))
+  //   }
+  // }, [appWidgets])
 
   const onDataSourceChange = (useDataSources: UseDataSource[]) => {
     props.onSettingChange({
@@ -53,6 +53,7 @@ export default function Setting (props: AllWidgetSettingProps<{}>) {
     })
   }
 
+  /*
   // Handler for the sidebar selection
   const handleSidebarSelect = evt => {
     console.log('set selected Sidebar widget: ', evt)
@@ -62,6 +63,7 @@ export default function Setting (props: AllWidgetSettingProps<{}>) {
       config: props.config.set('sidebarWidgetId', evt.currentTarget.value)
     })
   }
+  */
 
   return (
     <div className='toggle-sidebar-setting p-3'>
@@ -83,7 +85,7 @@ export default function Setting (props: AllWidgetSettingProps<{}>) {
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="Sidebar to Control">
+      {/* <SettingSection title="Sidebar to Control">
         {sidebarWidgetsArray && sidebarWidgetsArray.length > 0 &&
           <SettingRow className='p-2 justify-content-between align-items-center'>
             <Select
@@ -96,7 +98,7 @@ export default function Setting (props: AllWidgetSettingProps<{}>) {
             </Select>
           </SettingRow>
         }
-      </SettingSection>
+      </SettingSection> */}
     </div>
   )
 }

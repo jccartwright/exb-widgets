@@ -12,7 +12,7 @@ interface Config {}
 
 export type IMConfig = ImmutableObject<Config>
 
-class FilterChangeActionSetting extends React.PureComponent<ActionSettingProps<IMConfig>, States> {
+class ExtentChangeActionSetting extends React.PureComponent<ActionSettingProps<IMConfig>, States> {
   render () {
     return <div>
       no configuration options available
@@ -20,4 +20,4 @@ class FilterChangeActionSetting extends React.PureComponent<ActionSettingProps<I
   }
 }
 
-export default FilterChangeActionSetting
+export default ExtentChangeActionSetting

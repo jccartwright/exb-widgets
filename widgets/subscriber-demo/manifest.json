@@ -15,7 +15,14 @@
       "label": "Message Handler",
       "uri": "actions/message-handler-action",
       "settingUri": "actions/message-handler-action-setting"
+    },
+    {
+      "name": "extent-change",
+      "label": "Extent Change Handler",
+      "uri": "actions/extent-change-action",
+      "settingUri": "actions/extent-change-action-setting"
     }
+
   ],
   "properties": {},
   "translatedLocales": [

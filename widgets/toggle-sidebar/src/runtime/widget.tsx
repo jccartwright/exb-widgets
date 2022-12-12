@@ -97,6 +97,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
       return
     }
 
+    /*
     jmv.view.on('click', (evt) => {
       jmv.view.hitTest(evt).then((response) => {
         const coralHits = response.results?.filter(hitResult => hitResult.layer.title === pointLayerTitle.current)
@@ -107,6 +108,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         }
       })
     })
+    */
   }
 
   return (

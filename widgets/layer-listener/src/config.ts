@@ -1,10 +1,10 @@
-import { ImmutableObject } from 'seamless-immutable';
+import { ImmutableObject } from 'seamless-immutable'
 
 export interface Config {
-  zoomLevelToggle: number,
-  pointLayerTitle: string,
-  densityLayerTitle: string,
+  zoomLevelToggle: number
+  pointLayerTitle: string
+  densityLayerTitle: string
   showValues: boolean
 }
 
-export type IMConfig = ImmutableObject<Config>;
+export type IMConfig = ImmutableObject<Config>

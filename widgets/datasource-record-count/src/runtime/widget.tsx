@@ -4,10 +4,13 @@ import {
   jsx,
   DataSourceComponent,
   QueriableDataSource,
-  DataSource
+  DataSource,
+  IMState,
+  ReactRedux
 } from 'jimu-core'
 import { useState, useEffect } from 'react'
 import { IMConfig } from '../config'
+const { useSelector } = ReactRedux
 
 export default function (props: AllWidgetProps<IMConfig>) {
   const [totalRecordCount, setTotalRecordCount] = useState(null)
@@ -17,6 +20,13 @@ export default function (props: AllWidgetProps<IMConfig>) {
   const [updateQueued, setUpdateQueued] = useState(false)
   const updateNow = props.stateProps?.updateCount
   // console.log('re-rendering. updateNow: ', updateNow)
+
+  // get state for this widget
+  const widgetState = useSelector((state: IMState) => {
+    return state.widgetsState[props.widgetId]
+  })
+  // console.log('queryParams: ', widgetState?.queryParams)
+  // console.log('extent: ', widgetState?.extent)
 
   // any change in the props should cause widget to re-render and this useEffect to run
   useEffect(() => {
@@ -78,7 +88,7 @@ export default function (props: AllWidgetProps<IMConfig>) {
       method: 'POST',
       body: searchParams
     })
-    console.log(response)
+    // console.log(response)
     if (!response.ok) {
       console.log('failed to count total records from ' + dataSource.url)
       return
@@ -97,8 +107,8 @@ export default function (props: AllWidgetProps<IMConfig>) {
 
     const queryParams = dataSource?.getCurrentQueryParams()
     const count = await dataSource?.loadCount(queryParams, {widgetId: props.id})
-    console.log('queryParams: ', queryParams)
-    console.log('datasource-record-count: update complete. Count = '+count)
+    // console.log('queryParams: ', queryParams)
+    // console.log('datasource-record-count: update complete. Count = '+count)
     setIsUpdating(false)
     setRecordCount(count)
   }
