@@ -69,9 +69,16 @@ export default function (props: AllWidgetProps<IMConfig>) {
   }
 
   const filterOptions = createFilterOptions({
-    matchFrom: 'start',
-    limit: 5
+    matchFrom: 'start'
+    // limit: 5
   })
+
+  const listboxProps = {
+    sx: {
+      minHeight: 200,
+      maxHeight: 200
+    }
+  }
 
   return (
     <div className="widget-demo jimu-widget m-2">
@@ -89,6 +96,7 @@ export default function (props: AllWidgetProps<IMConfig>) {
         renderInput={(params) => <TextField {...params} label="Scientific Name" />}
         onChange={nameChangeHandler}
         size="small"
+        ListboxProps={listboxProps }
       />
     </div>
   )
