@@ -31,6 +31,7 @@ import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
 import MapView from 'esri/views/MapView'
 // import TileLayer from 'esri/layers/TileLayer'
+import reactiveUtils from 'esri/core/reactiveUtils'
 import { useState, useEffect, useRef } from 'react'
 import PhylumChart from './PhylumChart'
 import { IMConfig } from '../config'
@@ -242,7 +243,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
     jmv.view.when(() => {
       // TODO why is this not working? i.e. popups still appear
-      jmv.view.popup.autoOpenEnabled = false
+      // jmv.view.popup.autoOpenEnabled = false
 
       jmv.view.map.add(graphicsLayer)
       // queryParams not needed since initial draw is for all features
@@ -250,6 +251,12 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
         graphicsLayerRef.current.removeAll()
         graphicsLayerRef.current.graphics.addMany(graphics)
       })
+
+      // TODO not working
+      reactiveUtils.watch(
+        () => jmv.view.popup?.isResolved(),
+        () => { console.log('popup is resolved') }
+      )
 
       jmv.view.on('click', (evt) => {
         console.log('mapclick detected: ', evt)
