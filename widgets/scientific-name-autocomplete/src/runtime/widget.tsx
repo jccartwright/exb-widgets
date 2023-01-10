@@ -13,8 +13,6 @@ import { useState, useEffect } from 'react'
 import TextField from '@mui/material/TextField'
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import { IMConfig } from '../config'
-// replace w/ reading from external URL
-import { SCIENTIFIC_NAMES } from '../../scientific_names'
 
 /**
  * construct SQL clause based on name selection
@@ -29,25 +27,38 @@ function getQuery (selectedName): SqlQueryParams {
 }
 
 export default function (props: AllWidgetProps<IMConfig>) {
-  const [names, setNames] = useState(SCIENTIFIC_NAMES)
+  const [names, setNames] = useState<string[]>([])
   const [selectedName, setSelectedName] = useState<string|null>(null)
   const [dataSource, setDataSource] = useState<QueriableDataSource|null>(null)
 
-  // useEffect(() => {
-  //   // one time setup
-  //   fetch(props.config.menuItemsConfigUrl)
-  //     .then(response => response.json())
-  //     .then(data => setNames(data))
-  // }, [])
-
-  // if (names.length > 0) {
-  //   console.log(`${names.length} unique scientific names loaded`)
-  // }
+  useEffect(() => {
+    fetch(props.config.scientificNamesUrl).then()
+      .then((res) => {
+        if (!res.ok) {
+          console.warn(`Error reading configuration file from ${props.config.scientificNamesUrl}: `, res.statusText)
+          return
+        }
+        return res.json()
+      })
+      .then((nameslist) => {
+        if (!nameslist) {
+          console.error('configuration file improperly formatted: no names found')
+          return
+        }
+        if (nameslist.length > 0) {
+          console.log(`${nameslist.length} unique scientific names loaded from ${props.config.scientificNamesUrl}`)
+        }
+        setNames(nameslist)
+      })
+      .catch((err) => {
+        console.error('error fetching configuration file: ', err)
+      })
+  }, [props.config.scientificNamesUrl])
 
   useEffect(() => {
     if (!dataSource) {
       // cannot update queryParams w/o DataSource
-      console.warn('scientific-name-autocomplete: no DataSource - cannot update queryParams')
+      // console.warn('scientific-name-autocomplete: no DataSource - cannot update queryParams')
       return
     }
     const q = getQuery(selectedName)

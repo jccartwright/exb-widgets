@@ -1,7 +1,7 @@
 import { ImmutableObject } from 'seamless-immutable'
 
 export interface Config {
-  menuItemsConfigUrl: string
+  scientificNamesUrl: string
 }
 
 export type IMConfig = ImmutableObject<Config>
