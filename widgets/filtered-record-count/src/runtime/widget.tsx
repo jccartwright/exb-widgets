@@ -238,7 +238,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
 
   function formatCounts() {
     if (totalRecordCount !== null && filteredRecordCount !== null) {
-      return <span>{filteredRecordCount.toLocaleString('en-US')} out of {totalRecordCount.toLocaleString('en-US')} records</span>
+      return <span>{filteredRecordCount.toLocaleString('en-US')} out of {totalRecordCount.toLocaleString('en-US')} records in view</span>
     } else if (serverError) {
       return <span>Server Error - please try again</span>
     } else {
