@@ -17,7 +17,7 @@ export default function PhylumChart ({ data }: {data: DSVRowArray<string>}) {
 
   // derived from https://github.com/observablehq/plot-create-react-app-example
   useEffect(() => {
-    if (!data) { return }
+    if (!data?.length) { return }
     let chart
     // const chart = Plot.barX(data, {x: "Count", y: "Phylum"}).plot()
     if (data.length > 1) {
