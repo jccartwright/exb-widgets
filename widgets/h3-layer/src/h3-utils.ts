@@ -241,6 +241,30 @@ async function getPhylumCounts (h3, whereClause = '1=1') {
   return data.features.map(it => it.attributes)
 }
 
+async function getScientificNameCounts (h3, whereClause = '1=1') {
+  const startTime = new Date()
+  const searchParams = new URLSearchParams()
+  searchParams.set('where', `${whereClause} and h3_2='${h3}'`)
+  searchParams.set('groupByFieldsForStatistics', 'ScientificName')
+  searchParams.set('outStatistics', '[{"statisticType":"Count","onStatisticField":"ScientificName","outStatisticFieldName":"Count"}]')
+  searchParams.set('orderByFields', 'Count DESC')
+  searchParams.set('returnGeometry', 'false')
+  searchParams.set('f', 'json')
+
+  const response = await fetch(featureServiceUrl, {
+    method: 'POST',
+    body: searchParams
+  })
+  if (!response.ok) {
+    throw new Error('Error fetching data from: ' + featureServiceUrl)
+  }
+  const data = await response.json()
+  const endTime = new Date()
+  console.debug(`retrieved ScientificName counts for h3 ${h3} in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
+  if (!data?.features) { throw new Error('ScientificName counts payload incorrect') }
+  return data.features.map(it => it.attributes)
+}
+
 function getSimpleFillSymbol (fillColor = [227, 139, 79, 0.8]) {
   // default to Orange, opacity 80%
   // var randomColor = Math.floor(Math.random()*16777215).toString(16);
@@ -307,6 +331,7 @@ export {
   translateGraphic,
   getDepthRange,
   getPhylumCounts,
+  getScientificNameCounts,
   convertAndFormatCoordinates,
   createLayer,
   toggleOutlineColor,
