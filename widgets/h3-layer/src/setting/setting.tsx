@@ -21,6 +21,35 @@ export default function Setting (props: AllWidgetSettingProps<IMConfig>) {
     })
   }
 
+  const onSidePanelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(event)
+    props.onSettingChange({
+      id: props.id,
+      config: props.config.set('sidePanelId', event.target.value)
+    })
+  }
+  const onSectionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(event)
+    props.onSettingChange({
+      id: props.id,
+      config: props.config.set('sectionId', event.target.value)
+    })
+  }
+  const onDetailsViewChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(event)
+    props.onSettingChange({
+      id: props.id,
+      config: props.config.set('detailsViewId', event.target.value)
+    })
+  }
+  const onSummaryViewChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(event)
+    props.onSettingChange({
+      id: props.id,
+      config: props.config.set('summaryViewId', event.target.value)
+    })
+  }
+
   return (
     <div className='widget-setting-demo p-3'>
     <SettingSection title="Map">
@@ -32,6 +61,26 @@ export default function Setting (props: AllWidgetSettingProps<IMConfig>) {
     <SettingSection title="FeatureLayer Name">
       <SettingRow>
         <TextInput type="text" placeholder="layer name" htmlSize={28} value={props.config.layerName} onChange={onLayerNameChange}/>
+      </SettingRow>
+    </SettingSection>
+    <SettingSection title="Sidepanel">
+      <SettingRow>
+        <TextInput type="text" placeholder="widgetId" htmlSize={28} value={props.config.sidePanelId} onChange={onSidePanelChange}/>
+      </SettingRow>
+    </SettingSection>
+    <SettingSection title="Section">
+      <SettingRow>
+        <TextInput type="text" placeholder="sectionId" htmlSize={28} value={props.config.sectionId} onChange={onSectionChange}/>
+      </SettingRow>
+    </SettingSection>
+    <SettingSection title="Details View">
+      <SettingRow>
+        <TextInput type="text" placeholder="viewId" htmlSize={28} value={props.config.detailsViewId} onChange={onDetailsViewChange}/>
+      </SettingRow>
+    </SettingSection>
+    <SettingSection title="Summary View">
+      <SettingRow>
+        <TextInput type="text" placeholder="viewId" htmlSize={28} value={props.config.summaryViewId} onChange={onSummaryViewChange}/>
       </SettingRow>
     </SettingSection>
 
