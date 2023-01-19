@@ -28,8 +28,10 @@ import {
 } from 'jimu-core'
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import GraphicsLayer from 'esri/layers/GraphicsLayer'
+import FeatureLayer from 'esri/layers/FeatureLayer'
 import Graphic from 'esri/Graphic'
 import MapView from 'esri/views/MapView'
+import PopupTemplate from 'esri/PopupTemplate'
 // import TileLayer from 'esri/layers/TileLayer'
 import reactiveUtils from 'esri/core/reactiveUtils'
 import { useState, useEffect, useRef } from 'react'
@@ -40,9 +42,9 @@ import {
   getGraphics,
   getDepthRange,
   getPhylumCounts,
+  getScientificNameCounts,
   toggleOutlineColor,
-  getHighlightedGraphic,
-  getSpeciesCount
+  getHighlightedGraphic
 } from '../h3-utils'
 
 const { useSelector } = ReactRedux
@@ -52,20 +54,22 @@ interface HexbinSummary {
   maxDepth: number
   phylumCounts: PhylumCount[]
   speciesCount: SpeciesCount
+  scientificNameCounts: ScientificNameCount[]
 }
 
 interface PhylumCount {
   Count: number
   Phylum: string
 }
+interface ScientificNameCount {
+  Count: number
+  ScientificName: string
+}
 
 interface SpeciesCount {
   rawCount: number
-  normalizedCount: number
+  normalizedCount?: number
 }
-
-// WARNING: hardcoded value
-const sidebarWidgetId = 'widget_8'
 
 export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const graphicsLayerRef = useRef<GraphicsLayer>()
@@ -92,22 +96,21 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
   // Get the widget state - because the sidebar state may change in the runtime, via Redux's useSelector hook
   const sidebarWidgetState = useSelector((state: IMState) => {
-    const widgetState = state.widgetsState[sidebarWidgetId]
+    const widgetState = state.widgetsState[props.config.sidePanelId]
     return widgetState
   })
 
   const handleExpandSidebar = (sectionId: string, viewId: string): void => {
     if (!sidebarWidgetState) {
-      console.warn(`Sidebar ${sidebarWidgetId} not available`)
+      console.warn(`Sidebar ${props.config.sidePanelId} not available`)
       return
     }
-    if (sidebarWidgetState.collapse === false) {
-      getAppStore().dispatch(appActions.widgetStatePropChange(
-        sidebarWidgetId,
-        'collapse',
-        true
-      ))
-    }
+    // counterintuitive naming convention: "collapse=true" means panel is expanded
+    getAppStore().dispatch(appActions.widgetStatePropChange(
+      props.config.sidePanelId,
+      'collapse',
+      true
+    ))
     jimuHistory.changeView(sectionId, viewId)
   }
 
@@ -115,7 +118,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     // console.log('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
     resetHexbinSummary()
     if (!graphicsLayerRef.current) {
-      console.warn('GraphicsLayer not yet available')
+      // console.warn('GraphicsLayer not yet available')
       return
     }
 
@@ -126,10 +129,9 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }, [widgetState?.queryParams])
 
   useEffect(() => {
-    console.log('inside useEffect...')
     if (selectedGraphic) {
       const h3 = selectedGraphic.attributes.h3
-      console.log('selected hexbin changed: ', h3)
+      // console.log('selected hexbin changed: ', h3)
       deselectPreviousHexbin()
       toggleOutlineColor(selectedGraphic)
 
@@ -143,29 +145,31 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       Promise.all([
         getDepthRange(h3, whereClause),
         getPhylumCounts(h3, whereClause),
-        getSpeciesCount(h3, whereClause)
-      ]).then(([depthRange, phylumCounts, speciesCount]) => {
+        getScientificNameCounts(h3, whereClause)
+        // getSpeciesCount(h3, whereClause)
+      ]).then(([depthRange, phylumCounts, scientificNameCounts]) => {
         setHexbinSummary({
           minDepth: depthRange.MinDepth,
           maxDepth: depthRange.MaxDepth,
           phylumCounts,
-          speciesCount
+          scientificNameCounts,
+          speciesCount: { rawCount: scientificNameCounts.length }
         })
-        console.log('promises completed: ', depthRange, phylumCounts, speciesCount)
+        // console.log('promises completed: ', depthRange, phylumCounts, scientificNameCounts)
       }).catch((reason) => {
         console.error('Error getting HexbinSummary. ', reason)
         setServerError(reason)
       })
     } else {
-      console.log('no selected hexbin...')
+      // console.log('no selected hexbin...')
       resetHexbinSummary()
       deselectPreviousHexbin()
     }
-    console.log('leaving useEffect...')
   }, [selectedGraphic])
 
   function mapClickHandler (hitTestResult: __esri.HitTestResult, evt: __esri.ViewClickEvent) {
     console.log('inside mapClickHandler with : ', hitTestResult, evt)
+
     const featureHits = hitTestResult.results?.filter(hitResult =>
       hitResult.type === 'graphic' && hitResult.layer.type === 'feature'
     ) as __esri.GraphicHit[]
@@ -182,33 +186,27 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       setSelectedGraphic(null)
     } else {
       // when click lands on hexbin boundary, arbitrarily use the first element in array
-      console.log('click landed on hexbin boundary...')
       setSelectedGraphic(graphicHits[0].graphic)
     }
     console.log('open sidepanel if necessary')
     // open side panel and select view. featureHits takes priority
     if (featureHits.length) {
-      handleExpandSidebar('section_2', 'view_4')
+      handleExpandSidebar(props.config.sectionId, props.config.detailsViewId)
+      mapViewRef.current.popup.visible = true
     } else if (graphicHits.length) {
-      handleExpandSidebar('section_2', 'view_5')
+      handleExpandSidebar(props.config.sectionId, props.config.summaryViewId)
+      mapViewRef.current.popup.visible = false
     } else {
       // no hits. collapse side panel?
       console.log('no hits - leave sidepanel in current state')
-    }
-
-    // HACK - force popup visibility
-    if (!mapViewRef.current.popup.isResolved()) {
-      console.warn('Popup is not resolved')
-    }
-    if (featureHits.length && !mapViewRef.current.popup.visible) {
-      mapViewRef.current.popup.visible = true
-      console.warn('forcing popup to display')
-    } else if (!featureHits.length && mapViewRef.current.popup.visible) {
       mapViewRef.current.popup.visible = false
-      console.warn('forcing popup to hide')
     }
 
     console.log('leaving mapClickHandler...')
+    return ({
+      featureHits: featureHits.length,
+      graphicHits: graphicHits.length
+    })
   }
 
   function deselectPreviousHexbin () {
@@ -245,6 +243,15 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       // TODO why is this not working? i.e. popups still appear
       // jmv.view.popup.autoOpenEnabled = false
 
+      // define new simple popupTemplate to override one provided via WebMap
+      const coralsLayer = jmv.view.map.allLayers.filter(lyr => lyr.title === props.config.layerName).at(0) as FeatureLayer
+      // construct an explicit instance to make TypeScript happy
+      const popupTemplate = new PopupTemplate({
+        title: '{ScientificName}',
+        content: 'Catalog Number: {CatalogNumber}'
+      })
+      coralsLayer.popupTemplate = popupTemplate
+
       jmv.view.map.add(graphicsLayer)
       // queryParams not needed since initial draw is for all features
       getGraphics().then(graphics => {
@@ -253,28 +260,71 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       })
 
       // TODO not working
-      reactiveUtils.watch(
-        () => jmv.view.popup?.isResolved(),
-        () => { console.log('popup is resolved') }
+      // reactiveUtils.watch(
+      //   () => jmv.view.popup?.isResolved(),
+      //   () => { console.log('popup is resolved') }
+      // )
+
+      jmv.view.popup.when(
+        () => {
+          console.log('callback')
+
+          reactiveUtils.watch(
+            // check for popup visibility
+            () => jmv.view?.popup?.visible,
+            // callback
+            (visible) => {
+              // if NOT clicking on point, this runs twice -
+              // once w/ visible=true, once w/ visible=false
+              console.log(`popup visible: ${visible}`)
+            })
+        },
+        (err) => { console.error(err) }
       )
 
       jmv.view.on('click', (evt) => {
         console.log('mapclick detected: ', evt)
-        // HACK - force any previously opened popup to close
-        if (jmv.view.popup.visible) { jmv.view.popup.visible = false }
-
-        jmv.view.hitTest(evt)
-          .then((response: __esri.HitTestResult) => {
-            console.log('before mapClickHandler...')
-            mapClickHandler(response, evt)
-            console.log('after mapClickHandler...')
-          })
-          .catch(e => console.error('Error in hitTest: ', e))
+        try {
+          // HACK - force any previously opened popup to close
+          // if (jmv.view.popup.visible) {
+          //   console.log('forcing popup to close')
+          //   jmv.view.popup.visible = false
+          // }
+          console.log('running hitTest...')
+          jmv.view.hitTest(evt)
+            .then((response: __esri.HitTestResult) => {
+              console.log('hitTest response: ', response)
+              console.log('before mapClickHandler...')
+              mapClickHandler(response, evt)
+              console.log('after mapClickHandler...')
+            })
+            .catch(e => console.error('Error in hitTest: ', e))
+            .finally(() => console.log('inside finally block of hitTest'))
+        } catch (e) {
+          console.error('error in hitTest: ', e)
+        }
       })
     }) // end MapView#when
   } // end activeViewChangeHandler
 
   function formatHexbinSummary () {
+    const totalNumberOfSpecies = hexbinSummary?.scientificNameCounts.reduce(
+      (accumulator: number, currentValue: ScientificNameCount) => accumulator + currentValue.Count,
+      0
+    )
+
+    const calcSpeciesPercentage = (count: number) => {
+      const pct = Math.round((count / totalNumberOfSpecies) * 100)
+      return (pct || '<1')
+    }
+
+    let textAreaContent = ''
+    // list of scientificNameCounts guaranteed to have unique 'ScientificName'
+    // hexbinSummary?.scientificNameCounts.sort((a, b) => a.ScientificName > b.ScientificName ? 1 : -1).forEach(it => {
+    hexbinSummary?.scientificNameCounts.forEach(it => {
+      textAreaContent += `${it.ScientificName}: ${it.Count} (${calcSpeciesPercentage(it.Count)}%)\n`
+    })
+
     if (serverError) {
       return (
         <div>
@@ -299,8 +349,16 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
                 </ul> */}
                 <PhylumChart data={hexbinSummary.phylumCounts}/>
               </div>
+              <br/>
               <p style={{ fontSize: 'medium' }}><span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.speciesCount.rawCount}</span> unique scientific name(s)</p>
-
+              {/* <ul>
+              {hexbinSummary.scientificNameCounts.map(it => {
+                return <li>{it.ScientificName}: {it.Count} ({calcSpeciesPercentage(it.Count)}%)</li>
+              })}
+              </ul> */}
+              <textarea readOnly rows={5} style={{ width: '90%', marginLeft: '10px', marginRight: '15px' }}>
+              {textAreaContent}
+              </textarea>
             </div>
           : 'gathering summary information...'
         }
