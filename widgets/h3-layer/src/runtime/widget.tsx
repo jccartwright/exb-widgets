@@ -386,7 +386,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
         {hexbinSummary
           ? <div>
-              <p style={{ fontSize: 'medium' }}>depths range from <span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.minDepth}</span> to <span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.maxDepth}</span></p>
+              <p style={{ fontSize: 'medium' }}>depths range from <span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.minDepth}</span> to <span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.maxDepth}</span> m</p>
               <div>
                 <p style={{ fontSize: 'medium' }}>Phylum Counts:</p>
                 {/* <ul>
