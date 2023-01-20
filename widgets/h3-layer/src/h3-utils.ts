@@ -115,7 +115,7 @@ function toggleOutlineColor (graphic: Graphic) {
 
 async function getH3Counts (whereClause: string) {
   if ((whereClause === '1=1' || !whereClause) && noFiltersH3Counts) {
-    console.log('returning results from cache...')
+    // console.log('returning results from cache...')
     return noFiltersH3Counts
   }
 
@@ -265,6 +265,47 @@ async function getScientificNameCounts (h3, whereClause = '1=1') {
   return data.features.map(it => it.attributes)
 }
 
+// does not consider filter criteria
+// uses hardcoded URL different from points layer
+async function getEnvironmentalVariables(h3) {
+  const hexbinFeatureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/Deep_Sea_Corals_and_Sponges_summarized_in_level_4_hexbins/FeatureServer/0/query'
+  const startTime = new Date()
+  const searchParams = new URLSearchParams()
+  searchParams.set('where', `h3='${h3}'`)
+  searchParams.set('outFields', '*')
+  searchParams.set('returnGeometry', 'false')
+  searchParams.set('f', 'json')
+  const response = await fetch(hexbinFeatureServiceUrl, {
+    method: 'POST',
+    body: searchParams
+  })
+  if (!response.ok) {
+    throw new Error('Error fetching data from: ' + hexbinFeatureServiceUrl)
+  }
+  const data = await response.json()
+  const endTime = new Date()
+  const environmentalVariables = {}
+  // should always be exactly 1 feature returned
+  const attributes = data.features[0].attributes
+  if (attributes.oxygen) {
+    environmentalVariables.oxygen = attributes.oxygen
+    environmentalVariables.min_oxygen = attributes.min_oxygen
+    environmentalVariables.max_oxygen = attributes.max_oxygen
+  }
+  if (attributes.salinity) {
+    environmentalVariables.salinity = attributes.salinity
+    environmentalVariables.min_salinity = attributes.min_salinity
+    environmentalVariables.max_salinity = attributes.max_salinity
+  }
+  if (attributes.temperature) {
+    environmentalVariables.temperature = attributes.temperature
+    environmentalVariables.min_temperature = attributes.min_temperature
+    environmentalVariables.max_temperature = attributes.max_temperature
+  }
+  // console.debug(`retrieved environmental variables for h3 ${h3} in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
+  return (environmentalVariables)
+}
+
 function getSimpleFillSymbol (fillColor = [227, 139, 79, 0.8]) {
   // default to Orange, opacity 80%
   // var randomColor = Math.floor(Math.random()*16777215).toString(16);
@@ -287,7 +328,7 @@ async function getGraphics (whereClause = '1=1') {
   // 4 classes == 5 bins
   const classification = new Classification({ bucketType: 'QNT', data: data.map(it => it.Count), numClasses: 4, transparency: 0.5 })
   await classification.load()
-  console.log(`${classification.numElements} elements with values ranging from ${classification.min} to ${classification.max} with an average of ${classification.average}`)
+  // console.log(`${classification.numElements} elements with values ranging from ${classification.min} to ${classification.max} with an average of ${classification.average}`)
   // console.log('breakpoints: ', classification.breakpoints)
   // classification.printBinCounts()
 
@@ -338,5 +379,6 @@ export {
   stdColor,
   highlightColor,
   getHighlightedGraphic,
-  getSpeciesCount
+  getSpeciesCount,
+  getEnvironmentalVariables
 }

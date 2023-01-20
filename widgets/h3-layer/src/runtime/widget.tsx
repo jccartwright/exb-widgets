@@ -44,8 +44,10 @@ import {
   getPhylumCounts,
   getScientificNameCounts,
   toggleOutlineColor,
-  getHighlightedGraphic
+  getHighlightedGraphic,
+  getEnvironmentalVariables
 } from '../h3-utils'
+import { NoneOutlined } from 'sdk-sample/patches/1.6/patch1/arcgis-experience-builder/client/jimu-icons/outlined/editor/none'
 
 const { useSelector } = ReactRedux
 
@@ -55,8 +57,20 @@ interface HexbinSummary {
   phylumCounts: PhylumCount[]
   speciesCount: SpeciesCount
   scientificNameCounts: ScientificNameCount[]
+  environmentalVariables?: EnvironmentalVariables
 }
 
+interface EnvironmentalVariables {
+  salinity?: number
+  min_salinity?: number
+  max_salinity?: number
+  oxygen?: number
+  min_oxygen?: number
+  max_oxygen?: number
+  temperature?: number
+  min_temperature?: number
+  max_temperature?: number
+}
 interface PhylumCount {
   Count: number
   Phylum: string
@@ -145,17 +159,19 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       Promise.all([
         getDepthRange(h3, whereClause),
         getPhylumCounts(h3, whereClause),
-        getScientificNameCounts(h3, whereClause)
+        getScientificNameCounts(h3, whereClause),
+        getEnvironmentalVariables(h3)
         // getSpeciesCount(h3, whereClause)
-      ]).then(([depthRange, phylumCounts, scientificNameCounts]) => {
+      ]).then(([depthRange, phylumCounts, scientificNameCounts, environmentalVariables]) => {
         setHexbinSummary({
           minDepth: depthRange.MinDepth,
           maxDepth: depthRange.MaxDepth,
           phylumCounts,
           scientificNameCounts,
-          speciesCount: { rawCount: scientificNameCounts.length }
+          speciesCount: { rawCount: scientificNameCounts.length },
+          environmentalVariables
         })
-        // console.log('promises completed: ', depthRange, phylumCounts, scientificNameCounts)
+        // console.log('promises completed: ', depthRange, phylumCounts, scientificNameCounts, environmentalVariables)
       }).catch((reason) => {
         console.error('Error getting HexbinSummary. ', reason)
         setServerError(reason)
@@ -168,7 +184,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }, [selectedGraphic])
 
   function mapClickHandler (hitTestResult: __esri.HitTestResult, evt: __esri.ViewClickEvent) {
-    console.log('inside mapClickHandler with : ', hitTestResult, evt)
+    // console.log('inside mapClickHandler with : ', hitTestResult, evt)
 
     const featureHits = hitTestResult.results?.filter(hitResult =>
       hitResult.type === 'graphic' && hitResult.layer.type === 'feature'
@@ -179,16 +195,16 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     console.log(`${featureHits?.length || 0} features; ${graphicHits?.length || 0} hexbins`)
 
     if (graphicHits?.length === 1) {
-      console.log('hexbin clicked: ', graphicHits[0].graphic.attributes.h3)
+      // console.log('hexbin clicked: ', graphicHits[0].graphic.attributes.h3)
       setSelectedGraphic(graphicHits[0].graphic)
     } else if (graphicHits?.length === 0) {
-      console.log('outside hexbin')
+      // console.log('outside hexbin')
       setSelectedGraphic(null)
     } else {
       // when click lands on hexbin boundary, arbitrarily use the first element in array
       setSelectedGraphic(graphicHits[0].graphic)
     }
-    console.log('open sidepanel if necessary')
+    // console.log('open sidepanel if necessary')
     // open side panel and select view. featureHits takes priority
     if (featureHits.length) {
       handleExpandSidebar(props.config.sectionId, props.config.detailsViewId)
@@ -198,11 +214,11 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       mapViewRef.current.popup.visible = false
     } else {
       // no hits. collapse side panel?
-      console.log('no hits - leave sidepanel in current state')
+      // console.log('no hits - leave sidepanel in current state')
       mapViewRef.current.popup.visible = false
     }
 
-    console.log('leaving mapClickHandler...')
+    // console.log('leaving mapClickHandler...')
     return ({
       featureHits: featureHits.length,
       graphicHits: graphicHits.length
@@ -267,8 +283,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
       jmv.view.popup.when(
         () => {
-          console.log('callback')
-
           reactiveUtils.watch(
             // check for popup visibility
             () => jmv.view?.popup?.visible,
@@ -283,7 +297,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       )
 
       jmv.view.on('click', (evt) => {
-        console.log('mapclick detected: ', evt)
+        // console.log('mapclick detected: ', evt)
         try {
           // HACK - force any previously opened popup to close
           // if (jmv.view.popup.visible) {
@@ -293,13 +307,13 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
           console.log('running hitTest...')
           jmv.view.hitTest(evt)
             .then((response: __esri.HitTestResult) => {
-              console.log('hitTest response: ', response)
-              console.log('before mapClickHandler...')
+              // console.log('hitTest response: ', response)
+              // console.log('before mapClickHandler...')
               mapClickHandler(response, evt)
-              console.log('after mapClickHandler...')
+              // console.log('after mapClickHandler...')
             })
             .catch(e => console.error('Error in hitTest: ', e))
-            .finally(() => console.log('inside finally block of hitTest'))
+            .finally(() => console.log('hitTest promise complete'))
         } catch (e) {
           console.error('error in hitTest: ', e)
         }
@@ -324,6 +338,37 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     hexbinSummary?.scientificNameCounts.forEach(it => {
       textAreaContent += `${it.ScientificName}: ${it.Count} (${calcSpeciesPercentage(it.Count)}%)\n`
     })
+
+    function salinity (environmentalVariables) {
+      if (environmentalVariables?.salinity) {
+        const str = `${environmentalVariables.min_salinity} / ${hexbinSummary.environmentalVariables.salinity} / ${environmentalVariables.max_salinity}`
+        return (
+          <li>salinity(PSU): {str}</li>
+        )
+      } else {
+        return (<li>salinity: not available</li>)
+      }
+    }
+    function temperature (environmentalVariables) {
+      if (environmentalVariables?.temperature) {
+        const str = `${environmentalVariables.min_temperature} / ${hexbinSummary.environmentalVariables.temperature} / ${environmentalVariables.max_temperature}`
+        return (
+          <li>temperature(&#8451;): {str}</li>
+        )
+      } else {
+        return (<li>temperature: not available</li>)
+      }
+    }
+    function oxygen (environmentalVariables) {
+      if (environmentalVariables?.oxygen) {
+        const str = `${environmentalVariables.min_oxygen} / ${hexbinSummary.environmentalVariables.oxygen} / ${environmentalVariables.max_oxygen}`
+        return (
+          <li>oxygen(mL/L): {str}</li>
+        )
+      } else {
+        return (<li>oxygen: not available</li>)
+      }
+    }
 
     if (serverError) {
       return (
@@ -359,6 +404,14 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
               <textarea readOnly rows={5} style={{ width: '90%', marginLeft: '10px', marginRight: '15px' }}>
               {textAreaContent}
               </textarea>
+              <div style={{ marginTop: '5px' }}>
+                <span style={{ fontWeight: 'bold' }}>Environmental Variables</span> (min / median / max):
+                <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
+                  {salinity(hexbinSummary.environmentalVariables)}
+                  {temperature(hexbinSummary.environmentalVariables)}
+                  {oxygen(hexbinSummary.environmentalVariables)}
+                </ul>
+              </div>
             </div>
           : 'gathering summary information...'
         }
