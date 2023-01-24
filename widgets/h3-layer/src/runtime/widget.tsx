@@ -33,7 +33,7 @@ import Graphic from 'esri/Graphic'
 import MapView from 'esri/views/MapView'
 import PopupTemplate from 'esri/PopupTemplate'
 // import TileLayer from 'esri/layers/TileLayer'
-import reactiveUtils from 'esri/core/reactiveUtils'
+import * as reactiveUtils from 'esri/core/reactiveUtils'
 import { useState, useEffect, useRef } from 'react'
 import PhylumChart from './PhylumChart'
 import { IMConfig } from '../config'
@@ -47,7 +47,6 @@ import {
   getHighlightedGraphic,
   getEnvironmentalVariables
 } from '../h3-utils'
-import { NoneOutlined } from 'sdk-sample/patches/1.6/patch1/arcgis-experience-builder/client/jimu-icons/outlined/editor/none'
 
 const { useSelector } = ReactRedux
 
@@ -92,9 +91,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const [serverError, setServerError] = useState(false)
   const queryParamsRef = useRef(null)
   const mapViewRef = useRef<MapView>(null)
-  // const tileLayer = new TileLayer({
-  //   url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
-  // })
 
   // for convenience in JSX. cannot destruct from object because selectedGraphic may be null
   const h3 = selectedGraphic?.attributes.h3
@@ -183,9 +179,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     }
   }, [selectedGraphic])
 
-  function mapClickHandler (hitTestResult: __esri.HitTestResult, evt: __esri.ViewClickEvent) {
-    // console.log('inside mapClickHandler with : ', hitTestResult, evt)
+  function mapClickHandler (hitTestResult: __esri.HitTestResult) {
+    // console.log('inside mapClickHandler with : ', hitTestResult)
 
+    // hitTest options ensure that only Corals layer and Graphics layer tested
     const featureHits = hitTestResult.results?.filter(hitResult =>
       hitResult.type === 'graphic' && hitResult.layer.type === 'feature'
     ) as __esri.GraphicHit[]
@@ -204,25 +201,14 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       // when click lands on hexbin boundary, arbitrarily use the first element in array
       setSelectedGraphic(graphicHits[0].graphic)
     }
-    // console.log('open sidepanel if necessary')
     // open side panel and select view. featureHits takes priority
     if (featureHits.length) {
       handleExpandSidebar(props.config.sectionId, props.config.detailsViewId)
-      mapViewRef.current.popup.visible = true
     } else if (graphicHits.length) {
       handleExpandSidebar(props.config.sectionId, props.config.summaryViewId)
-      mapViewRef.current.popup.visible = false
     } else {
-      // no hits. collapse side panel?
-      // console.log('no hits - leave sidepanel in current state')
-      mapViewRef.current.popup.visible = false
+      // no hits - leave sidepanel in current state
     }
-
-    // console.log('leaving mapClickHandler...')
-    return ({
-      featureHits: featureHits.length,
-      graphicHits: graphicHits.length
-    })
   }
 
   function deselectPreviousHexbin () {
@@ -244,23 +230,17 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       return
     }
     mapViewRef.current = jmv.view as MapView
+
     const graphicsLayer = new GraphicsLayer({
       title: 'Hexbins',
       listMode: 'show'
     })
     graphicsLayerRef.current = graphicsLayer
 
-    // const opts = {
-    //   include: graphicsLayer,
-    //   exclude: tileLayer
-    // }
-
     jmv.view.when(() => {
-      // TODO why is this not working? i.e. popups still appear
-      // jmv.view.popup.autoOpenEnabled = false
+      const coralsLayer = jmv.view.map.allLayers.filter(lyr => lyr.title === props.config.layerName).at(0) as FeatureLayer
 
       // define new simple popupTemplate to override one provided via WebMap
-      const coralsLayer = jmv.view.map.allLayers.filter(lyr => lyr.title === props.config.layerName).at(0) as FeatureLayer
       // construct an explicit instance to make TypeScript happy
       const popupTemplate = new PopupTemplate({
         title: '{ScientificName}',
@@ -275,49 +255,34 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
         graphicsLayerRef.current.graphics.addMany(graphics)
       })
 
-      // TODO not working
-      // reactiveUtils.watch(
-      //   () => jmv.view.popup?.isResolved(),
-      //   () => { console.log('popup is resolved') }
-      // )
-
-      jmv.view.popup.when(
-        () => {
-          reactiveUtils.watch(
-            // check for popup visibility
-            () => jmv.view?.popup?.visible,
-            // callback
-            (visible) => {
-              // if NOT clicking on point, this runs twice -
-              // once w/ visible=true, once w/ visible=false
-              console.log(`popup visible: ${visible}`)
-            })
-        },
-        (err) => { console.error(err) }
-      )
+      const hitTestOptions = {
+        include: [coralsLayer, graphicsLayer]
+      }
 
       jmv.view.on('click', (evt) => {
         // console.log('mapclick detected: ', evt)
-        try {
-          // HACK - force any previously opened popup to close
-          // if (jmv.view.popup.visible) {
-          //   console.log('forcing popup to close')
-          //   jmv.view.popup.visible = false
-          // }
-          console.log('running hitTest...')
-          jmv.view.hitTest(evt)
-            .then((response: __esri.HitTestResult) => {
-              // console.log('hitTest response: ', response)
-              // console.log('before mapClickHandler...')
-              mapClickHandler(response, evt)
-              // console.log('after mapClickHandler...')
-            })
-            .catch(e => console.error('Error in hitTest: ', e))
-            .finally(() => console.log('hitTest promise complete'))
-        } catch (e) {
-          console.error('error in hitTest: ', e)
-        }
-      })
+        const startTimeForPopup = new Date()
+
+        // attempt to delay execution of hitTest on points, hexbin layers until webmap popup completes
+        jmv.view.popup.fetchFeatures(evt).then((response) => {
+          // default to empty array to keep TypeScript happy
+          const layerViewPromises = response.promisesPerLayerView || []
+          Promise.allSettled(layerViewPromises).then(() => {
+            // popup should be complete at this point
+            const elapsedMillisecsForPopup = new Date().getTime() - startTimeForPopup.getTime()
+            console.log(`popup completed in ${elapsedMillisecsForPopup / 1000} seconds`)
+            const startTimeForHitTest = new Date()
+            jmv.view
+              .hitTest(evt, hitTestOptions)
+              .then((response) => mapClickHandler(response))
+              .catch((error) => console.error('Error in hitTest: ', error))
+              .finally(() => {
+                const elapsedMillisecsForHitTest = new Date().getTime() - startTimeForHitTest.getTime()
+                console.log(`hitTest completed in ${elapsedMillisecsForHitTest / 1000} seconds`)
+              })
+          }) // end promisesPerLayerView
+        }) // end popup.fetchFeatures
+      }) // end view on click
     }) // end MapView#when
   } // end activeViewChangeHandler
 
